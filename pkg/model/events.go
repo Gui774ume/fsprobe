@@ -1,13 +1,30 @@
+/*
+Copyright © 2020 GUILLAUME FOURNIER
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package model
 
-import "C"
 import (
+	"C"
 	"bytes"
 	"fmt"
-	"github.com/Gui774ume/fsprobe/pkg/utils"
-	"github.com/pkg/errors"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/Gui774ume/fsprobe/pkg/utils"
 )
 
 type EventName string
@@ -17,8 +34,8 @@ var (
 	Open EventName = "open"
 	// Mkdir - Mkdir event
 	Mkdir EventName = "mkdir"
-	// HLink - Hard link event
-	HLink EventName = "hlink"
+	// Link - Soft link event
+	Link EventName = "link"
 	// Rename - Rename event
 	Rename EventName = "rename"
 	// SetAttr - Attribute update event
@@ -41,7 +58,7 @@ func GetEventType(evtType uint32) EventName {
 	case 1:
 		return Mkdir
 	case 2:
-		return HLink
+		return Link
 	case 3:
 		return Rename
 	case 4:
@@ -76,38 +93,89 @@ func resolvePaths(data []byte, evt *FSEvent, monitor *Monitor, read int) error {
 	var err error
 	switch monitor.Options.DentryResolutionMode {
 	case DentryResolutionFragments:
-		evt.SrcFilename, err = monitor.dentryResolver.ResolveInode(evt.SrcMountID, evt.SrcInode)
+		inode := evt.SrcInode
+		if evt.SrcPathnameKey != 0 {
+			inode = uint64(evt.SrcPathnameKey)
+		}
+		evt.SrcFilename, err = monitor.DentryResolver.ResolveInode(evt.SrcMountID, inode)
 		if err != nil {
 			return errors.Wrap(err, "failed to resolve src dentry path")
 		}
 		switch evt.EventType {
-		case HLink, Rename:
-			evt.TargetFilename, err = monitor.dentryResolver.ResolveInode(evt.TargetMountID, evt.TargetInode)
+		case Link, Rename:
+			evt.TargetFilename, err = monitor.DentryResolver.ResolveInode(evt.TargetMountID, evt.TargetInode)
 			if err != nil {
 				return errors.Wrap(err, "failed to resolve target dentry path")
 			}
+		}
+		if evt.EventType == Link {
+			// Remove cache entry for link events
+			_ = monitor.DentryResolver.RemoveInode(evt.TargetMountID, evt.TargetInode)
+			_ = monitor.DentryResolver.RemoveInode(evt.TargetMountID, evt.TargetInode)
 		}
 		break
 	case DentryResolutionSingleFragment:
-		evt.SrcFilename, err = monitor.dentryResolver.ResolveKey(evt.SrcPathnameKey, evt.SrcPathnameLength)
+		evt.SrcFilename, err = monitor.DentryResolver.ResolveKey(evt.SrcPathnameKey, evt.SrcPathnameLength)
 		if err != nil {
 			return errors.Wrap(err, "failed to resolve src dentry path")
 		}
 		switch evt.EventType {
-		case HLink, Rename:
-			evt.TargetFilename, err = monitor.dentryResolver.ResolveKey(evt.TargetPathnameKey, evt.TargetPathnameLength)
+		case Link, Rename:
+			evt.TargetFilename, err = monitor.DentryResolver.ResolveKey(evt.TargetPathnameKey, evt.TargetPathnameLength)
 			if err != nil {
 				return errors.Wrap(err, "failed to resolve target dentry path")
 			}
 		}
+		if evt.EventType == Link {
+			// Remove cache entry for link events
+			_ = monitor.DentryResolver.RemoveEntry(evt.SrcPathnameKey)
+			_ = monitor.DentryResolver.RemoveEntry(evt.TargetPathnameKey)
+		}
 		break
 	case DentryResolutionPerfBuffer:
-		srcEnd := read + int(evt.SrcPathnameLength)
-		evt.SrcFilename = decodePath(data[read:srcEnd])
+		// Decode path from perf buffer when needed
+		srcEnd := read
+		if evt.SrcPathnameLength > 0 {
+			srcEnd += int(evt.SrcPathnameLength)
+			evt.SrcFilename = decodePath(data[read:srcEnd])
+		}
+		// Resolve end of path from cache when needed
+		if evt.SrcPathnameKey > 0 {
+			prefix, err := monitor.DentryResolver.ResolveKey(evt.SrcPathnameKey, 0)
+			if err != nil {
+				return errors.Wrap(err, "failed to resolve src dentry path")
+			}
+			evt.SrcFilename = prefix + evt.SrcFilename
+		}
+		// Cache resolved path when needed
+		if evt.SrcPathnameLength > 0 && evt.EventType != Link {
+			err = monitor.DentryResolver.AddCacheEntry(uint32(evt.SrcInode), evt.SrcFilename)
+			if err != nil {
+				return errors.Wrap(err, "failed to add src cached inode")
+			}
+		}
 		switch evt.EventType {
-		case HLink, Rename:
-			targetEnd := srcEnd + int(evt.TargetPathnameLength)
-			evt.TargetFilename = decodePath(data[srcEnd:targetEnd])
+		case Link, Rename:
+			// Decode path from perf buffer when needed
+			if evt.TargetPathnameLength > 0 {
+				targetEnd := srcEnd + int(evt.TargetPathnameLength)
+				evt.TargetFilename = decodePath(data[srcEnd:targetEnd])
+			}
+			// Resolve end of path from cache when needed
+			if evt.TargetPathnameKey > 0 {
+				prefix, err := monitor.DentryResolver.ResolveKey(evt.TargetPathnameKey, 0)
+				if err != nil {
+					return errors.Wrap(err, "failed to resolve target dentry path")
+				}
+				evt.TargetFilename = prefix + evt.TargetFilename
+			}
+			// Cache resolved path when needed
+			if evt.TargetPathnameLength > 0 && evt.EventType != Link {
+				err = monitor.DentryResolver.AddCacheEntry(uint32(evt.TargetInode), evt.TargetFilename)
+				if err != nil {
+					return errors.Wrap(err, "failed to add target cached inode")
+				}
+			}
 		}
 		break
 	}
@@ -122,7 +190,12 @@ func decodePath(raw []byte) string {
 	for _, b := range raw {
 		if b == 0 {
 			// End of fragment, append to the end of the list of fragments
-			fragments = append(fragments, fragment)
+			if len(fragment) > 0 {
+				fragments = append(fragments, fragment)
+			} else {
+				// stop resolution there, the rest of the buffer could be leftover from another path
+				break
+			}
 			fragment = ""
 		} else {
 			fragment += string(b)
@@ -147,7 +220,6 @@ func decodePath(raw []byte) string {
 
 // FSEvent - Raw event definition
 type FSEvent struct {
-	Pidns                uint64    `json:"pidns"`
 	Timestamp            time.Time `json:"-"`
 	Pid                  uint32    `json:"pid"`
 	Tid                  uint32    `json:"tid"`
@@ -172,32 +244,31 @@ type FSEvent struct {
 }
 
 func (e *FSEvent) UnmarshalBinary(data []byte, bootTime time.Time) (int, error) {
-	if len(data) < 120 {
+	if len(data) < 112 {
 		return 0, errors.New("not enough data")
 	}
 	// Process context data
-	e.Pidns = utils.ByteOrder.Uint64(data[0:8])
-	e.Timestamp = bootTime.Add(time.Duration(utils.ByteOrder.Uint64(data[8:16])) * time.Nanosecond)
-	e.Pid = utils.ByteOrder.Uint32(data[16:20])
-	e.Tid = utils.ByteOrder.Uint32(data[20:24])
-	e.UID = utils.ByteOrder.Uint32(data[24:28])
-	e.GID = utils.ByteOrder.Uint32(data[28:32])
-	e.TTYName = string(bytes.Trim(data[32:48], "\x00"))
-	e.Comm = string(bytes.Trim(data[48:64], "\x00"))
+	e.Timestamp = bootTime.Add(time.Duration(utils.ByteOrder.Uint64(data[0:8])) * time.Nanosecond)
+	e.Pid = utils.ByteOrder.Uint32(data[8:12])
+	e.Tid = utils.ByteOrder.Uint32(data[12:16])
+	e.UID = utils.ByteOrder.Uint32(data[16:20])
+	e.GID = utils.ByteOrder.Uint32(data[20:24])
+	e.TTYName = string(bytes.Trim(data[24:40], "\x00"))
+	e.Comm = string(bytes.Trim(data[40:56], "\x00"))
 	// File system event data
-	e.Flags = utils.ByteOrder.Uint32(data[64:68])
-	e.Mode = utils.ByteOrder.Uint32(data[68:72])
-	e.SrcPathnameKey = utils.ByteOrder.Uint32(data[72:76])
-	e.TargetPathnameKey = utils.ByteOrder.Uint32(data[76:80])
-	e.SrcInode = utils.ByteOrder.Uint64(data[80:88])
-	e.SrcPathnameLength = utils.ByteOrder.Uint32(data[88:92])
-	e.SrcMountID = utils.ByteOrder.Uint32(data[92:96])
-	e.TargetInode = utils.ByteOrder.Uint64(data[96:104])
-	e.TargetPathnameLength = utils.ByteOrder.Uint32(data[104:108])
-	e.TargetMountID = utils.ByteOrder.Uint32(data[108:112])
-	e.Retval = int32(utils.ByteOrder.Uint32(data[112:116]))
-	e.EventType = GetEventType(utils.ByteOrder.Uint32(data[116:120]))
-	return 120, nil
+	e.Flags = utils.ByteOrder.Uint32(data[56:60])
+	e.Mode = utils.ByteOrder.Uint32(data[60:64])
+	e.SrcPathnameKey = utils.ByteOrder.Uint32(data[64:68])
+	e.TargetPathnameKey = utils.ByteOrder.Uint32(data[68:72])
+	e.SrcInode = utils.ByteOrder.Uint64(data[72:80])
+	e.SrcPathnameLength = utils.ByteOrder.Uint32(data[80:84])
+	e.SrcMountID = utils.ByteOrder.Uint32(data[84:88])
+	e.TargetInode = utils.ByteOrder.Uint64(data[88:96])
+	e.TargetPathnameLength = utils.ByteOrder.Uint32(data[96:100])
+	e.TargetMountID = utils.ByteOrder.Uint32(data[100:104])
+	e.Retval = int32(utils.ByteOrder.Uint32(data[104:108]))
+	e.EventType = GetEventType(utils.ByteOrder.Uint32(data[108:112]))
+	return 112, nil
 }
 
 // PrintFilenames - Returns a string representation of the filenames of the event

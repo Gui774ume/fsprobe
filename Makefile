@@ -24,4 +24,4 @@ build:
 	go build -o bin/ ./...
 
 run:
-	sudo ./bin/fsprobe
+	sudo ./bin/fsprobe /tmp

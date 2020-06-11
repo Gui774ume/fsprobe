@@ -1,3 +1,18 @@
+/*
+Copyright © 2020 GUILLAUME FOURNIER
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef _MAPS_H_
 #define _MAPS_H_
 
@@ -6,7 +21,7 @@ enum event_type
 {
     EVENT_OPEN,
     EVENT_MKDIR,
-    EVENT_HLINK,
+    EVENT_LINK,
     EVENT_RENAME,
     EVENT_UNLINK,
     EVENT_RMDIR,
@@ -50,6 +65,7 @@ struct dentry_cache_t
     struct dentry *src_dentry;
     struct inode *target_dir;
     struct dentry *target_dentry;
+    u32 cursor;
 };
 
 // dentry_cache - Dentry cache map used to store dentry cache structures between 2 eBPF programs
@@ -58,6 +74,16 @@ struct bpf_map_def SEC("maps/dentry_cache") dentry_cache = {
     .key_size = sizeof(u64),
     .value_size = sizeof(struct dentry_cache_t),
     .max_entries = 1000,
+    .pinning = PIN_NONE,
+    .namespace = "",
+};
+
+// dentry_cache_builder - Dentry cache builder map used to reduce the amount of data on the stack
+struct bpf_map_def SEC("maps/dentry_cache_builder") dentry_cache_builder = {
+    .type = BPF_MAP_TYPE_ARRAY,
+    .key_size = sizeof(u32),
+    .value_size = sizeof(struct dentry_cache_t),
+    .max_entries = 16,
     .pinning = PIN_NONE,
     .namespace = "",
 };
@@ -101,8 +127,25 @@ struct bpf_map_def SEC("maps/paths_builder") paths_builder = {
     .type = BPF_MAP_TYPE_ARRAY,
     .key_size = sizeof(u32),
     .value_size = sizeof(struct fs_event_wrapper_t),
-    // 32770 - Equal to max pid, required to make sure that an interrupted resolution will not affect another one.
-    .max_entries = 16,
+    .max_entries = 32770,
+    .pinning = PIN_NONE,
+    .namespace = "",
+};
+
+struct bpf_map_def SEC("maps/cached_inodes") cached_inodes = {
+    .type = BPF_MAP_TYPE_HASH,
+    .key_size = sizeof(u32),
+    .value_size = sizeof(u8),
+    .max_entries = 10000,
+    .pinning = PIN_NONE,
+    .namespace = "",
+};
+
+struct bpf_map_def SEC("maps/inodes_filter") inodes_filter = {
+    .type = BPF_MAP_TYPE_HASH,
+    .key_size = sizeof(u32),
+    .value_size = sizeof(u8),
+    .max_entries = 10111,
     .pinning = PIN_NONE,
     .namespace = "",
 };
