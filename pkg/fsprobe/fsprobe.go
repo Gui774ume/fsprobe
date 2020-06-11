@@ -1,16 +1,36 @@
+/*
+Copyright © 2020 GUILLAUME FOURNIER
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package fsprobe
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/Gui774ume/fsprobe/pkg/fsprobe/monitor"
 	"golang.org/x/sys/unix"
+	"io/ioutil"
 	"math"
 	"math/rand"
-	"strings"
+	"os"
+	"path"
+	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/Gui774ume/fsprobe/pkg/assets"
-	"github.com/Gui774ume/fsprobe/pkg/fsprobe/monitor"
 	"github.com/Gui774ume/fsprobe/pkg/model"
 	"github.com/Gui774ume/fsprobe/pkg/utils"
 
@@ -22,15 +42,16 @@ import (
 
 // FSProbe - Main File system probe structure
 type FSProbe struct {
-	options      *model.FSProbeOptions
-	paths        []string
-	wg           *sync.WaitGroup
-	collection   *ebpf.Collection
-	monitors     []*model.Monitor
-	bootTime     time.Time
-	hostPidns    uint64
-	running      bool
-	runningMutex sync.RWMutex
+	options        *model.FSProbeOptions
+	paths          []string
+	wg             *sync.WaitGroup
+	collection     *ebpf.Collection
+	collectionSpec *ebpf.CollectionSpec
+	monitors       []*model.Monitor
+	bootTime       time.Time
+	hostPidns      uint64
+	running        bool
+	runningMutex   sync.RWMutex
 }
 
 // NewFSProbeWithOptions - Creates a new FSProbe instance with the provided options
@@ -86,7 +107,7 @@ func (fsp *FSProbe) Watch(paths ...string) error {
 		// 1.1) setup FSProbe for the first time
 		fsp.runningMutex.RUnlock()
 		fsp.runningMutex.Lock()
-		if err := fsp.setup(); err != nil {
+		if err := fsp.start(); err != nil {
 			return err
 		}
 		fsp.running = true
@@ -100,22 +121,16 @@ func (fsp *FSProbe) Watch(paths ...string) error {
 }
 
 // setup - runs the setup steps to start fsprobe
-func (fsp *FSProbe) setup() error {
+func (fsp *FSProbe) start() error {
 	// 1) Initialize FSProbe
 	if err := fsp.init(); err != nil {
 		return err
 	}
-	// 2) Compile eBPF programs
-	if fsp.options.CompileEBPF {
-		if err := fsp.compileEBPFProgram(); err != nil {
-			return err
-		}
-	}
-	// 3) Load eBPF programs
+	// 2) Load eBPF programs
 	if err := fsp.loadEBPFProgram(); err != nil {
 		return err
 	}
-	// 4) Start monitors
+	// 3) Start monitors
 	if err := fsp.startMonitors(); err != nil {
 		return err
 	}
@@ -134,6 +149,8 @@ func (fsp *FSProbe) init() error {
 	fsp.bootTime = time.Unix(int64(bt), 0)
 	// Get host netns
 	fsp.hostPidns = utils.GetPidnsFromPid(1)
+	// Register monitors
+	fsp.monitors = monitor.RegisterMonitors()
 	return nil
 }
 
@@ -146,8 +163,10 @@ func (fsp *FSProbe) Stop() error {
 		}
 	}
 	// 2) Close eBPF programs
-	if errs := fsp.collection.Close(); len(errs) > 0 {
-		logrus.Errorf("couldn't close collection gracefully: %v", errs)
+	if fsp.collection != nil {
+		if errs := fsp.collection.Close(); len(errs) > 0 {
+			logrus.Errorf("couldn't close collection gracefully: %v", errs)
+		}
 	}
 	// 3) Wait for all goroutine to stop
 	fsp.wg.Wait()
@@ -168,16 +187,18 @@ func (fsp *FSProbe) loadEBPFProgram() error {
 	}
 	reader := bytes.NewReader(buf)
 	// Load elf CollectionSpec
-	collectionSpec, err := ebpf.LoadCollectionSpecFromReader(reader)
+	fsp.collectionSpec, err = ebpf.LoadCollectionSpecFromReader(reader)
 	if err != nil {
 		return errors.Wrap(err, "couldn't load collection spec")
 	}
-	// Edit runtime eBPF contstants
-	if err := fsp.EditEBPFConstants(collectionSpec); err != nil {
+	// Remove unused maps based on the selected dentry resolution method
+	fsp.removeUnusedMaps()
+	// Edit runtime eBPF constants
+	if err := fsp.EditEBPFConstants(fsp.collectionSpec); err != nil {
 		return errors.Wrap(err, "couldn't edit runtime eBPF constants")
 	}
 	// Load eBPF program
-	fsp.collection, err = ebpf.NewCollectionWithOptions(collectionSpec, ebpf.CollectionOptions{ebpf.ProgramOptions{LogSize: 1024*1024*3}})
+	fsp.collection, err = ebpf.NewCollectionWithOptions(fsp.collectionSpec, ebpf.CollectionOptions{Programs: ebpf.ProgramOptions{LogSize: 1024 * 1024 * 3}})
 	if err != nil {
 		return errors.Wrap(err, "couldn't load eBPF program")
 	}
@@ -186,8 +207,6 @@ func (fsp *FSProbe) loadEBPFProgram() error {
 
 // startMonitors - Loads and attaches the eBPF program in the kernel
 func (fsp *FSProbe) startMonitors() error {
-	// Register monitors
-	fsp.monitors = monitor.RegisterMonitors()
 	// Init monitors
 	for _, p := range fsp.monitors {
 		if err := p.Init(fsp); err != nil {
@@ -207,22 +226,166 @@ func (fsp *FSProbe) startMonitors() error {
 
 // addWatch - Updates the eBPF hashmaps to look for the provided paths
 func (fsp *FSProbe) addWatch(paths ...string) error {
+	// Add paths to the list of watched paths
+	fsp.runningMutex.Lock()
+	fsp.paths = append(fsp.paths, paths...)
+	fsp.runningMutex.Unlock()
+	if fsp.options.Recursive {
+		// Watch all directories provided in paths recursively
+		return fsp.addRecursiveWatch(paths...)
+	}
+	// On watch the top level directories
+	return fsp.addTopLevelWatch(paths...)
+}
+
+// addTopLevelWatch - Adds watches by walking only the top level depth of directories
+func (fsp *FSProbe) addTopLevelWatch(paths ...string) error {
+	for _, p := range paths {
+		// Check if the path is a directory
+		pathInfo, err := os.Stat(p)
+		if err != nil {
+			return err
+		}
+		if pathInfo.IsDir() {
+			// List the top level of the directory
+			files, err := ioutil.ReadDir(p)
+			if err != nil {
+				return err
+			}
+			for _, f := range files {
+				fullPath := path.Join(p, f.Name())
+				statTmp, ok := f.Sys().(*syscall.Stat_t)
+				if !ok && statTmp == nil {
+					continue
+				}
+				// Add inode in cache
+				fsp.watchInode(uint32(statTmp.Ino), fullPath)
+			}
+		}
+		// Add the file (or directory itself) to the list of watched files
+		pathStat, ok := pathInfo.Sys().(*syscall.Stat_t)
+		if !ok && pathStat == nil {
+			continue
+		}
+		// Add file in cache
+		fsp.watchInode(uint32(pathStat.Ino), p)
+	}
 	return nil
+}
+
+// addRecursiveWatch - Adds watches by walking through all the provided paths recursively
+func (fsp *FSProbe) addRecursiveWatch(paths ...string) error {
+	var err error
+	for _, path := range paths {
+		err = filepath.Walk(path, func(walkPath string, fi os.FileInfo, err error) error {
+			if err != nil {
+				logrus.Warnf("couldn't add watch for %s: %v", walkPath, err)
+				return nil
+			}
+			if !fi.IsDir() {
+				return nil
+			}
+			stat, ok := fi.Sys().(*syscall.Stat_t)
+			if !ok && stat == nil {
+				return nil
+			}
+			// Add inode in cache
+			fsp.watchInode(uint32(stat.Ino), walkPath)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// watchInode - Adds an inode the in the resolver cache
+func (fsp *FSProbe) watchInode(inode uint32, path string) {
+	for _, m := range fsp.monitors {
+		// Add inode filter
+		if err := m.AddInodeFilter(inode, path); err != nil {
+			logrus.Warnf("couldn't watch inode %v of path %s: %v", inode, path, err)
+			continue
+		}
+	}
 }
 
 // EditEBPFConstants - Edit the runtime eBPF constants
 func (fsp *FSProbe) EditEBPFConstants(spec *ebpf.CollectionSpec) error {
-	// There is only one for now: dentry_resolution_mode
-	dentryResolutionMode := "dentry_resolution_mode"
-	for k, v := range spec.Programs {
-		// Only kretprobe use the constant
-		if !strings.Contains(v.SectionName, "kretprobe") {
-			continue
-		}
-		editor := ebpf.Edit(&v.Instructions)
-		if err := editor.RewriteConstant(dentryResolutionMode, uint64(fsp.options.DentryResolutionMode)); err != nil {
-			logrus.Warnf("couldn't rewrite symbol %s in program %s: %v\n", dentryResolutionMode, k, err)
+	// Edit the constants of all the probes declared in FSProbe
+	for _, mon := range fsp.monitors {
+		for _, probes := range mon.Probes {
+			for _, probe := range probes {
+				if len(probe.Constants) == 0 {
+					continue
+				}
+				spec, ok := spec.Programs[probe.SectionName]
+				if !ok {
+					return fmt.Errorf("couldn't find section %s", probe.SectionName)
+				}
+				editor := ebpf.Edit(&spec.Instructions)
+				// Edit constants
+				for _, constant := range probe.Constants {
+					var value uint64
+					switch constant {
+					case model.DentryResolutionModeConst:
+						value = uint64(fsp.options.DentryResolutionMode)
+					case model.InodeFilteringModeConst:
+						if fsp.options.PathsFiltering {
+							value = 1
+						}
+					case model.FollowModeConst:
+						if fsp.options.FollowRenames {
+							value = 1
+						}
+					case model.RecursiveModeConst:
+						if fsp.options.Recursive {
+							value = 1
+						}
+					default:
+						return fmt.Errorf("couldn't rewrite symbol %s in program %s: unknown symbol", constant, probe.SectionName)
+					}
+					if err := editor.RewriteConstant(constant, value); err != nil {
+						logrus.Warnf("couldn't rewrite symbol %s in program %s: %v", constant, probe.SectionName, err)
+					}
+				}
+			}
 		}
 	}
 	return nil
+}
+
+// removeUnusedMaps - Removes unused maps in the collectionSpec so that we use less kernel memory
+func (fsp *FSProbe) removeUnusedMaps() {
+	if fsp.collectionSpec == nil {
+		return
+	}
+	toRemove := []string{}
+	for name := range fsp.collectionSpec.Maps {
+		used := false
+		// check if the map is used in all the monitors
+		for _, m := range fsp.monitors {
+			rmm, ok := m.ResolutionModeMaps[fsp.options.DentryResolutionMode]
+			if !ok {
+				continue
+			}
+			for _, eMapName := range rmm {
+				logrus.Debugln(eMapName)
+				if name == eMapName {
+					used = true
+					break
+				}
+			}
+			if used {
+				break
+			}
+		}
+		if !used {
+			toRemove = append(toRemove, name)
+		}
+	}
+	for _, name := range toRemove {
+		delete(fsp.collectionSpec.Maps, name)
+	}
 }

@@ -13,16 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package model
+package cmd
 
-// FSProbeOptions - Filesystem probe options
-type FSProbeOptions struct {
-	Recursive            bool
-	Events               []EventName
-	PerfBufferSize       int
-	UserSpaceChanSize    int
-	DentryResolutionMode DentryResolutionMode
-	PathsFiltering       bool
-	FollowRenames        bool
-	EventChan            chan *FSEvent
+import "github.com/Gui774ume/fsprobe/pkg/model"
+
+// CLIOptions - Command line options
+type CLIOptions struct {
+	Format         string
+	OutputFilePath string
+	Paths          []string
+	FSOptions      model.FSProbeOptions
 }

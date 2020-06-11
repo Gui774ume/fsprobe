@@ -1,3 +1,18 @@
+/*
+Copyright © 2020 GUILLAUME FOURNIER
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef _PROCESS_H_
 #define _PROCESS_H_
 
@@ -8,7 +23,6 @@
 struct process_ctx_t
 {
     // Process data
-    u64 pidns;
     u64 timestamp;
     u32 pid;
     u32 tid;
@@ -23,13 +37,6 @@ __attribute__((always_inline)) static u64 fill_process_data(struct process_ctx_t
 {
     // Process data
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
-
-    struct nsproxy *nsproxy;
-    bpf_probe_read(&nsproxy, sizeof(nsproxy), &task->nsproxy);
-
-    struct pid_namespace *pid_ns;
-    bpf_probe_read(&pid_ns, sizeof(pid_ns), &nsproxy->pid_ns_for_children);
-    bpf_probe_read(&data->pidns, sizeof(data->pidns), &pid_ns->ns.inum);
 
     // TTY
     struct signal_struct *signal;

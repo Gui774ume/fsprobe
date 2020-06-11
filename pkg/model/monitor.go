@@ -1,6 +1,23 @@
+/*
+Copyright © 2020 GUILLAUME FOURNIER
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package model
 
 import (
+	"fmt"
+	"github.com/Gui774ume/fsprobe/pkg/utils"
 	"sync"
 
 	"github.com/Gui774ume/ebpf"
@@ -9,15 +26,16 @@ import (
 
 // Monitor - Base monitor
 type Monitor struct {
-	wg             *sync.WaitGroup
-	collection     *ebpf.Collection
-	dentryResolver DentryResolver
-	FSProbe        FSProbe
-	MapNames       []string
-	Name           string
-	Options        *FSProbeOptions
-	Probes         map[EventName][]*Probe
-	PerfMaps       []*PerfMap
+	wg                 *sync.WaitGroup
+	collection         *ebpf.Collection
+	ResolutionModeMaps map[DentryResolutionMode][]string
+	DentryResolver     DentryResolver
+	FSProbe            FSProbe
+	InodeFilterSection string
+	Name               string
+	Options            *FSProbeOptions
+	Probes             map[EventName][]*Probe
+	PerfMaps           []*PerfMap
 }
 
 // Configure - Configures the probes using the provided options
@@ -45,7 +63,7 @@ func (m *Monitor) Configure() {
 		}
 	}
 	// Setup dentry resolver
-	m.dentryResolver, _ = NewDentryResolver(m)
+	m.DentryResolver, _ = NewDentryResolver(m)
 }
 
 // GetName - Returns the name of the monitor
@@ -117,6 +135,27 @@ func (m *Monitor) Stop() error {
 		if err := pm.pollStop(); err != nil {
 			logrus.Errorf("couldn't close perf map %v gracefully: %v", pm.PerfOutputMapName, err)
 		}
+	}
+	return nil
+}
+
+func (m *Monitor) AddInodeFilter(inode uint32, path string) error {
+	// Add file in caches
+	if m.DentryResolver != nil {
+		if err := m.DentryResolver.AddCacheEntry(inode, path); err != nil {
+			return err
+		}
+	}
+	// Add inode filter
+	filter := m.GetMap(m.InodeFilterSection)
+	if filter == nil {
+		return fmt.Errorf("couldn't find %v map", m.InodeFilterSection)
+	}
+	keyB := make([]byte, 4)
+	utils.ByteOrder.PutUint32(keyB, inode)
+	var valueB byte
+	if err := filter.Put(keyB, valueB); err != nil {
+		return err
 	}
 	return nil
 }
