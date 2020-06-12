@@ -113,13 +113,13 @@ This method relies on a user space cache and the `cached_inodes` eBPF hashmap to
 
 ### Capabilities Matrix
 
-| Feature | [Inotify](https://www.man7.org/linux/man-pages/man7/inotify.7.html) | [FSProbe](https://github.com/Gui774ume/fsprobe) | [Opensnoop](https://github.com/iovisor/bcc/blob/master/tools/opensnoop.py) | [Perf](http://www.brendangregg.com/perf.html) | 
-| --- | --- | --- | --- | --- |
-| Process context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Container context | :x: | :white_check_mark: (not implemented yet) | :white_check_mark: (not implemented) | :x: |
-| Inode context | :x: | :white_check_mark: | :x: | :white_check_mark: |
-| Mount point context | :x: | :white_check_mark: | :x: | :white_check_mark: |
-| User / Group context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| In-kernel filtering | :white_check_mark: | :white_check_mark: | :x: | :x: |
-| Recursive | :x: | :white_check_mark: | :x: | :x: |
-| Follow files after move | :x: | :white_check_mark: | :x: | :x: |
+| Feature | [Inotify](https://www.man7.org/linux/man-pages/man7/inotify.7.html) | [FSProbe](https://github.com/Gui774ume/fsprobe) | [Opensnoop](https://github.com/iovisor/bcc/blob/master/tools/opensnoop.py) | [Perf](http://www.brendangregg.com/perf.html) | [Falco](https://github.com/falcosecurity/falco)
+| --- | --- | --- | --- | --- | --- |
+| Process context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| User / Group context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Inode context | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| Mount point context | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: |
+| In-kernel filtering | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: |
+| Container context | :x: | :x: (not implemented yet) | :x: | :x: | :white_check_mark: |
+| Recursive | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: |
+| Follow files after move | :x: | :white_check_mark: | :x: | :x: | :x: |
