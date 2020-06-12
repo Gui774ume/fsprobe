@@ -117,9 +117,11 @@ This method relies on a user space cache and the `cached_inodes` eBPF hashmap to
 | --- | --- | --- | --- | --- | --- |
 | Process context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | User / Group context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Recursive feature | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Resolved paths | :white_check_mark: | :white_check_mark: (max depth: 70) | :x: | :white_check_mark: (max depth: 9) | :x: |
+| Absolute paths | :white_check_mark: | :white_check_mark: (max depth: 70) | :x: | :white_check_mark: (max depth: 9) | :x: |
 | Inode context | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: |
 | Mount point context | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: |
 | In-kernel filtering | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: |
 | Container context | :x: | :x: (not implemented yet) | :x: | :x: | :white_check_mark: |
-| Recursive | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: |
 | Follow files after move | :x: | :white_check_mark: | :x: | :x: | :x: |
