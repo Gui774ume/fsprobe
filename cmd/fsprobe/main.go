@@ -26,7 +26,5 @@ func main() {
 		TimestampFormat:        "2006-01-02T15:04:05Z",
 		DisableLevelTruncation: true,
 	})
-	if err := cmd.FSProbeCmd.Execute(); err != nil {
-		logrus.Fatalf("couldn't start fsprobe")
-	}
+	cmd.FSProbeCmd.Execute()
 }

@@ -83,7 +83,7 @@ func probeO() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "probe.o", size: 1516224, mode: os.FileMode(436), modTime: time.Unix(1591898313, 0)}
+	info := bindataFileInfo{name: "probe.o", size: 1516224, mode: os.FileMode(436), modTime: time.Unix(1591954016, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

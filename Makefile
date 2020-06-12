@@ -25,3 +25,6 @@ build:
 
 run:
 	sudo ./bin/fsprobe /tmp
+
+install:
+	sudo cp ./bin/fsprobe /usr/bin/

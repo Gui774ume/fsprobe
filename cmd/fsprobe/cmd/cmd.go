@@ -28,6 +28,7 @@ var FSProbeCmd = &cobra.Command{
 FSProbe relies on eBPF to capture file system events on dentry kernel structures.
 More information about the project can be found on github: https://github.com/Gui774ume/fsprobe`,
 	RunE: runFSProbeCmd,
+	Example: "sudo fsprobe /tmp",
 }
 
 // options - CLI options
@@ -37,33 +38,41 @@ func init() {
 	FSProbeCmd.Flags().Var(
 		NewDentryResolutionModeValue(&options.FSOptions.DentryResolutionMode),
 		"dentry-resolution-mode",
-		"In-kernel dentry resolution mode. Can be either \"fragments\", \"single_fragment\" or \"perf_buffer\"")
+		`In-kernel dentry resolution mode. Can be either "fragments",
+"single_fragment" or "perf_buffer"`)
 	FSProbeCmd.Flags().BoolVarP(
 		&options.FSOptions.Recursive,
 		"recursive",
 		"r",
 		true,
-		`Watches all subdirectories of any directory passed as argument. Watches will be set up recursively to an 
-unlimited depth. Symbolic links are traversed. Newly created subdirectories will also be watched. When this option 
-is not provided, only the immediate children of a provided directory are watched`)
+		`Watches all subdirectories of any directory passed as argument.
+Watches will be set up recursively to an unlimited depth.
+Symbolic links are not traversed. Newly created subdirectories
+will also be watched. When this option is not provided, only
+the immediate children of a provided directory are watched`)
 	FSProbeCmd.Flags().BoolVar(
 		&options.FSOptions.PathsFiltering,
 		"paths-filtering",
 		true,
-		`When activated, FSProbe will only notify events on the paths provided to the Watch function. When 
-deactivated, FSProbe will notify events on the entire file system`)
+		`When activated, FSProbe will only notify events on the paths 
+provided to the Watch function. When deactivated, FSProbe
+will notify events on the entire file system`)
 	FSProbeCmd.Flags().BoolVar(
 		&options.FSOptions.FollowRenames,
 		"follow",
 		true,
-		`When activated, FSProbe will keep watching the files that were initially in a watched directory and were 
-moved to a location that is not necessarily watched. In other words, files are followed even after a move`)
+		`When activated, FSProbe will keep watching the files that were
+initially in a watched directory and were moved to a location
+that is not necessarily watched. In other words, files are followed
+even after a move`)
 	FSProbeCmd.Flags().VarP(
 		NewEventsValue(&options.FSOptions.Events),
 		"event",
 		"e",
-		`Listens for specific event(s) only. This option can be specified more than once. If omitted, only "open" 
-events are listened for. Available options: open, mkdir, link, rename, setattr, unlink, rmdir, modify`)
+		`Listens for specific event(s) only. This option can be specified
+more than once. If omitted, only "open" events are listened for.
+Available options: open, mkdir, link, rename, setattr, unlink,
+rmdir, modify`)
 	FSProbeCmd.Flags().IntVarP(
 		&options.FSOptions.UserSpaceChanSize,
 		"chan-size",
@@ -74,17 +83,20 @@ events are listened for. Available options: open, mkdir, link, rename, setattr, 
 		&options.FSOptions.PerfBufferSize,
 		"perf-buffer-size",
 		128,
-		"Perf ring buffer size for kernel-space to user-space communication")
+		`Perf ring buffer size for kernel-space to user-space
+communication`)
 	FSProbeCmd.Flags().StringVarP(
 		&options.Format,
 		"format",
 		"f",
 		"table",
-		"Defines the output format. Options are: table, json, none")
+		`Defines the output format.
+Options are: table, json, none`)
 	FSProbeCmd.Flags().StringVarP(
 		&options.OutputFilePath,
 		"output",
 		"o",
 		"",
-		"Outputs events to the provided file rather than stdout")
+		`Outputs events to the provided file rather than
+stdout`)
 }

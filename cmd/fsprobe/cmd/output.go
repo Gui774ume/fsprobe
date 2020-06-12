@@ -141,7 +141,7 @@ type TableOutput struct {
 func NewTableOutput(writer io.Writer) TableOutput {
 	out := TableOutput{
 		output: writer,
-		fmt:    "%7v %7v %6v %6v %6v %6v %16v %6v %10v %6v %6v %16v %s\n",
+		fmt:    "%7v %7v %6v %6v %6v %6v %16v %6v %10v %7v %6v %6v %16v %s\n",
 		tsFmt:  "3:04PM",
 	}
 	out.PrintHeader()
@@ -161,6 +161,7 @@ func (to TableOutput) Write(event *model.FSEvent) error {
 		event.Comm,
 		event.TTYName,
 		event.SrcInode,
+		event.SrcMountID,
 		model.ErrValueToString(event.Retval),
 		event.PrintMode(),
 		event.PrintFlags(),
@@ -171,7 +172,7 @@ func (to TableOutput) Write(event *model.FSEvent) error {
 
 // PrintHeader - Prints table header
 func (to TableOutput) PrintHeader() {
-	fmt.Printf(to.fmt, "EVT", "TS", "PID", "TID", "UID", "GID", "CMD", "TTY", "INODE", "RET", "MODE", "FLAG", "PATH")
+	fmt.Printf(to.fmt, "EVT", "TS", "PID", "TID", "UID", "GID", "CMD", "TTY", "INODE", "MOUNTID", "RET", "MODE", "FLAG", "PATH")
 }
 
 // DummyOutput - Dummy output for the none format
