@@ -224,10 +224,22 @@ var (
 				UserSpaceBufferLen: 1000,
 				PerfOutputMapName:  "fs_events",
 				DataHandler:        HandleFSEvent,
+				LostHandler:        LostFSEvent,
 			},
 		},
 	}
 )
+
+// LostFSEvent - Handles a LostEvent
+func LostFSEvent(count uint64, mapName string, monitor *model.Monitor) {
+	// Dispatch event
+	if monitor.Options.LostChan != nil {
+		monitor.Options.LostChan <- &model.LostEvt{
+			Count: count,
+			Map:   mapName,
+		}
+	}
+}
 
 // HandleFSEvent - Handles a file system event
 func HandleFSEvent(data []byte, monitor *model.Monitor) {

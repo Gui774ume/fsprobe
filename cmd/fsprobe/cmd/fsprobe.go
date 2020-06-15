@@ -39,6 +39,7 @@ func runFSProbeCmd(cmd *cobra.Command, args []string) error {
 	}
 	// 2) Set the output channel to FSProbe's output channel
 	options.FSOptions.EventChan = output.EvtChan
+	options.FSOptions.LostChan = output.LostChan
 	// 3) Instantiates FSProbe
 	probe := fsprobe.NewFSProbeWithOptions(options.FSOptions)
 	// 4) Start listening for events

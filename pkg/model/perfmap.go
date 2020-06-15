@@ -20,12 +20,11 @@ import (
 
 	"github.com/Gui774ume/ebpf"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
-// lostMetrics - Reacts on lost metrics
-func lostMetrics(count uint64, mapName string, m *Monitor) {
-	logrus.Warnf("%v lost %v events", mapName, count)
+type LostEvt struct {
+	Count uint64
+	Map string
 }
 
 // PerfMap - Definition of a perf map, used to bring data back to user space
@@ -47,9 +46,6 @@ func (pm *PerfMap) Init(m *Monitor) error {
 	pm.monitor = m
 	if pm.DataHandler == nil {
 		return errors.New("Data handler not set")
-	}
-	if pm.LostHandler == nil {
-		pm.LostHandler = lostMetrics
 	}
 	// Default userspace buffer length
 	if pm.UserSpaceBufferLen == 0 {

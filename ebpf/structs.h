@@ -127,25 +127,25 @@ struct bpf_map_def SEC("maps/paths_builder") paths_builder = {
     .type = BPF_MAP_TYPE_ARRAY,
     .key_size = sizeof(u32),
     .value_size = sizeof(struct fs_event_wrapper_t),
-    .max_entries = 32770,
+    .max_entries = 40000,
     .pinning = PIN_NONE,
     .namespace = "",
 };
 
 struct bpf_map_def SEC("maps/cached_inodes") cached_inodes = {
-    .type = BPF_MAP_TYPE_HASH,
+    .type = BPF_MAP_TYPE_LRU_HASH,
     .key_size = sizeof(u32),
     .value_size = sizeof(u8),
-    .max_entries = 10000,
+    .max_entries = 40000,
     .pinning = PIN_NONE,
     .namespace = "",
 };
 
 struct bpf_map_def SEC("maps/inodes_filter") inodes_filter = {
-    .type = BPF_MAP_TYPE_HASH,
+    .type = BPF_MAP_TYPE_LRU_HASH,
     .key_size = sizeof(u32),
     .value_size = sizeof(u8),
-    .max_entries = 10111,
+    .max_entries = 120000,
     .pinning = PIN_NONE,
     .namespace = "",
 };
@@ -165,7 +165,7 @@ struct bpf_map_def SEC("maps/single_fragments") single_fragments = {
     .type = BPF_MAP_TYPE_LRU_HASH,
     .key_size = sizeof(u32),
     .value_size = sizeof(struct single_fragment_t),
-    .max_entries = 10000,
+    .max_entries = 40000,
     .pinning = PIN_NONE,
     .namespace = "",
 };

@@ -29,6 +29,7 @@ import (
 
 type Output struct {
 	EvtChan chan *model.FSEvent
+	LostChan chan *model.LostEvt
 	wg      *sync.WaitGroup
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -44,6 +45,7 @@ func NewOutput(options CLIOptions) (*Output, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	output := Output{
 		EvtChan: make(chan *model.FSEvent, options.FSOptions.UserSpaceChanSize),
+		LostChan: make(chan *model.LostEvt, options.FSOptions.UserSpaceChanSize),
 		wg: &sync.WaitGroup{},
 		ctx: ctx,
 		cancel: cancel,
@@ -56,6 +58,7 @@ func NewOutput(options CLIOptions) (*Output, error) {
 func (o *Output) Callback() {
 	o.wg.Add(1)
 	var evt *model.FSEvent
+	var lost *model.LostEvt
 	var ok bool
 	var count int
 	for {
@@ -64,6 +67,14 @@ func (o *Output) Callback() {
 			logrus.Printf("%v events captured", count)
 			o.wg.Done()
 			return
+		case lost, ok = <-o.LostChan:
+			if !ok {
+				logrus.Printf("%v events captured", count)
+				o.wg.Done()
+				return
+			}
+			logrus.Warnf("lost %v events from %v", lost.Count, lost.Map)
+			break
 		case evt, ok = <-o.EvtChan:
 			if !ok {
 				logrus.Printf("%v events captured", count)
@@ -75,6 +86,7 @@ func (o *Output) Callback() {
 			if err := o.writer.Write(evt); err != nil {
 				logrus.Errorf("couldn't write event to output: %v", err)
 			}
+			break
 		}
 	}
 }
@@ -85,6 +97,8 @@ func (o *Output) Start() {
 
 func (o *Output) Close() {
 	o.cancel()
+	close(o.EvtChan)
+	close(o.LostChan)
 	o.wg.Wait()
 }
 

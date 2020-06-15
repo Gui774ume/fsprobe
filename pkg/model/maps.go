@@ -28,7 +28,7 @@ const (
 	// resolve them anymore. This is used by both the perf buffer method and the single fragment method.
 	CachedInodesMap = "cached_inodes"
 	// PerfBufferCachedInodesSize - Max number of cached inodes
-	PerfBufferCachedInodesSize = 10000
+	PerfBufferCachedInodesSize = 120000
 	// FSEventsMap - Perf event buffer map used to retrieve events in userspace
 	FSEventsMap = "fs_events"
 	// DentryCacheMap - LRU Hashmap used to cache dentry data between kprobes

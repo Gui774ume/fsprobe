@@ -25,4 +25,5 @@ type FSProbeOptions struct {
 	PathsFiltering       bool
 	FollowRenames        bool
 	EventChan            chan *FSEvent
+	LostChan             chan *LostEvt
 }
