@@ -113,28 +113,28 @@ This method relies on a user space cache and the `cached_inodes` eBPF hashmap to
 
 ##### Important metrics
 
-Each resolution method described above has its strengths and its weaknesses. Depending on the use case, choosing the right resolution method will yield better performances. We based our benchmark on 3 important metrics:
+Each resolution method described above has its strengths and its weaknesses. Depending on the use case, choosing the right resolution method might yield better performances. We based our benchmark on 3 important metrics:
 
-- The in-kernel execution overhead: as the dentry resolution happens within FSProbe's eBPF programs, a captured FS syscall will only return once the path has been resolved. The faster our eBPF programs are, the lower the runtime overhead and delay will be for the applications in production. This overhead is measured in nanosecond per operation (ns/op), where an "operation" is made of a `Open` and a `Close` syscall.
-- The user space CPU & memory usage: bringing a stream of events back to user space has serious performance implications on FSProbe's user space program. The more resource FSProbe needs to bring those events back, the less resource will be available for the rest of the host. This overhead is measured in bytes per operation (B/op), where the calculated amount of bytes is the total amount of memory that was allocated to bring 1 event back to user space. Although this doesn't produce any metric on the CPU per se, allocating memory and copying data puts a lot of pressure on the CPU, and is the main consumer of CPU resource (since the benchmark doesn't do anything once an event is brought back).
-- The maximum events rate sustained over 10 seconds: one of the biggest concerns with a monitoring tool based on eBPF & perf ring buffers is for the kernel to drop some events because the  buffers are full. This metric is important to determine the maximum rate of events per second above which events will be dropped.
+- **The in-kernel execution overhead**: as the dentry resolution happens within FSProbe's eBPF programs, a captured FS syscall will only return once the path has been resolved. The faster our eBPF programs are, the smaller the runtime overhead and delay will be for the applications in production. This overhead is measured in nanosecond per operation (ns/op), where an "operation" is made of an `Open` and a `Close` syscall.
+- **The user space CPU & memory usage**: bringing a stream of events back to user space has serious performance implications on FSProbe's user space program. The more resource FSProbe needs to bring those events back, the less resource will be available for the rest of the host. This overhead is measured in bytes per operation (B/op), where the calculated amount of bytes is the total amount of memory that was allocated to bring 1 event back to user space. Although this doesn't produce any metric on the CPU per se, allocating memory and copying data put a lot of pressure on the CPU, and are the main consumers of CPU resources (since the benchmark doesn't do anything once an event is brought back).
+- **The maximum events rate sustained over 10 seconds**: one of the biggest concerns with a monitoring tool based on eBPF & perf ring buffers is for the kernel to drop some events because the  buffers are full. This metric is important to determine the maximum rate of events per second above which events will be dropped.
 
 ##### Benchmark parameters 
 
-After playing around with all the available parameters that FSProbe offers, we realized that only 3 of them had a real impact on the resource usage:
+We quickly realized that only 3 parameters have a real impact on the usage of resources:
 
-- The depths of the paths that are being watched
-- The total number of nodes that are being watched (a node designates a folder or a file)
-- The size of the perf ring buffers
+- The depths of the paths that are being watched.
+- The total number of nodes that are being watched (a node designates a folder or a file).
+- The size of the perf ring buffer `fs_events`, used to send events back to user space.
 
 Based on this observation, we decided that all our benchmarks would use the following parameters:
 
-- All the paths used for the benchmark will be made of nodes of identical size: 10 randomly generated letters or numbers
-- All the user space channel will have a buffer of 1000 entries
-- Each benchmark will be done over 120,000 iterations
-- The paths generator used for the benchmark will randomly choose a file to open in the pool of generated paths, at each iteration.
-- The paths generator generates paths with constant depths: there can only be one child folder per folder and only the last folder contains one or multiple files.
-- In-kernel caches were set to 40,000 entries for each technique, and the inodes filter was set to allow up to 120,000 inodes.
+- All the paths used for the benchmark will be made of nodes of identical size: 10 randomly generated letters or numbers.
+- All the user space channels will have a buffer of 1,000 entries.
+- Each benchmark will be done with `b.N` set to 120,000 iterations.
+- The paths generator will randomly choose a file to open in the pool of generated paths, at each iteration.
+- The paths generator will generate paths with constant depths: there can only be one child folder per folder and only the last folder contains one or multiple files.
+- In-kernel caches will be set to 40,000 entries for each method, and the inodes filter will be set to allow up to 120,000 inodes.
 
 Finally, we ran the benchmark through 6 scenarios:
 
@@ -160,13 +160,13 @@ The entire output of the benchmark is available [here](documentation/FSProbe%20b
 | 5 | **Best ns/op**: next is 30% slower. **Lowest B/op**: others are 63% higher (**Evt drop limit**: 512) | **Evt drop limit**: 2048 | **Second best ns/op**: next is 20% slower. **Second lowest B/op**: next is 325% higher (**Evt drop limit**: 32) |
 | 6 | **Evt drop limit**: 128 | **Best ns/op**: next is 6% slower (**Evt drop limit**: 1024) | **Second best ns/op**: next is 1% slower. **Lowest B/op**: others are 300% - 350% higher (**Evt drop limit**: 64) |
 
-Based on this benchmark the `perf_buffer` method seems to be the most memory efficient one in most situations. Although its in-kernel overhead is not always the best, this method has such a lower memory footprint that we argue that the tradeoff is worth it. You will find below the output of the benchmark for the `perf_buffer` method, and for the scenario number 6 (we consider this scenario to be the most realistic one).
+Based on this benchmark the `perf_buffer` method seems to be the most memory efficient one in most situations. Although its in-kernel overhead is not always the best, this method has such a lower memory footprint that we argue that the tradeoff is worth it. You will find below the output of the benchmark for the `perf_buffer` method, and for the scenario number 6 (we consider this scenario to be the most interesting one since it puts a lot of pressure on the caches).
 
 ![Perf buffer scenario 6 - execution overhead](documentation/perf_buffer_execution_overhead.png)
 
 ![Perf buffer scenario 6 - memory overhead](documentation/perf_buffer_memory_overhead.png)
 
-The last part of the benchmark is about the maximum sustainable rates of events per second. We decided to measure these rates for the parameters of scenario 6 since we consider it to be the most realistic. It is worth noting that the `single_fragment` method was unable to complete the test as it kept dropping events.
+The last part of the benchmark is about the maximum sustainable rates of events per second. The following results were calculated for the parameters used in scenario 6. It is worth noting that the `single_fragment` method was unable to complete the benchmark, as it kept dropping events.
 
 ![Maximum rates of events per seconds (sustained over 10 seconds without losing events)](documentation/maximum_rates.png)
 
