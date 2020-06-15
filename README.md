@@ -138,12 +138,12 @@ Based on this observation, we decided that all our benchmarks would use the foll
 
 Finally, we ran the benchmark through 6 scenarios:
 
-1) `depths = 10 / folder_count = 1 / file_count = 1`
-2) `depths = 60 / folder_count = 1 / file_count = 1`
-3) `depths = 10 / folder_count = 1 / file_count = 120,000` (all 120,000 files are in the same leaf folder)
-4) `depths = 10 / folder_count = 4,000 / file_count = 80,000` (2 files per leaf folder)
-5) `depths = 60 / folder_count = 1,000 / file_count = 60,000` (1 file per leaf folder)
-6) `depths = 5 / folder_count = 8,000 / file_count = 80,000` (2 files per leaf folder)
+1) `depths = 10 / breadth = 1 / file_count = 1`
+2) `depths = 60 / breadth = 1 / file_count = 1`
+3) `depths = 10 / breadth = 1 / file_count = 120,000` (all 120,000 files are in the same leaf folder)
+4) `depths = 10 / breadth = 4,000 / file_count = 80,000` (2 files per leaf folder)
+5) `depths = 60 / breadth = 1,000 / file_count = 60,000` (1 file per leaf folder)
+6) `depths = 5 / breadth = 8,000 / file_count = 80,000` (2 files per leaf folder)
 
 For each scenario we retried the benchmark with a different perf rin buffer size. We tested the following sizes: [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096].
 
