@@ -111,10 +111,68 @@ This method relies on a user space cache and the `cached_inodes` eBPF hashmap to
 
 #### Benchmark
 
+##### Important metrics
+
+Each resolution method described above has its strengths and its weaknesses. Depending on the use case, choosing the right resolution method will yield better performances. We based our benchmark on 3 important metrics:
+
+- The in-kernel execution overhead: as the dentry resolution happens within FSProbe's eBPF programs, a captured FS syscall will only return once the path has been resolved. The faster our eBPF programs are, the lower the runtime overhead and delay will be for the applications in production. This overhead is measured in nanosecond per operation (ns/op), where an "operation" is made of a `Open` and a `Close` syscall.
+- The user space CPU & memory usage: bringing a stream of events back to user space has serious performance implications on FSProbe's user space program. The more resource FSProbe needs to bring those events back, the less resource will be available for the rest of the host. This overhead is measured in bytes per operation (B/op), where the calculated amount of bytes is the total amount of memory that was allocated to bring 1 event back to user space. Although this doesn't produce any metric on the CPU per se, allocating memory and copying data puts a lot of pressure on the CPU, and is the main consumer of CPU resource (since the benchmark doesn't do anything once an event is brought back).
+- The maximum events rate sustained over 10 seconds: one of the biggest concerns with a monitoring tool based on eBPF & perf ring buffers is for the kernel to drop some events because the  buffers are full. This metric is important to determine the maximum rate of events per second above which events will be dropped.
+
+##### Benchmark parameters 
+
+After playing around with all the available parameters that FSProbe offers, we realized that only 3 of them had a real impact on the resource usage:
+
+- The depths of the paths that are being watched
+- The total number of nodes that are being watched (a node designates a folder or a file)
+- The size of the perf ring buffers
+
+Based on this observation, we decided that all our benchmarks would use the following parameters:
+
+- All the paths used for the benchmark will be made of nodes of identical size: 10 randomly generated letters or numbers
+- All the user space channel will have a buffer of 1000 entries
+- Each benchmark will be done over 120,000 iterations
+- The paths generator used for the benchmark will randomly choose a file to open in the pool of generated paths and at each iteration
+- In-kernel caches were set to 40,000 entries for each technique, and the inodes filter was set to allow up to 120,000 inodes.
+
+Finally, we ran the benchmark through 6 scenarios:
+
+1) `depths = 10 / folder_count = 1 / file_count = 1`
+2) `depths = 60 / folder_count = 1 / file_count = 1`
+3) `depths = 10 / folder_count = 1 / file_count = 120,000`
+4) `depths = 10 / folder_count = 4,000 / file_count = 80,000`
+5) `depths = 60 / folder_count = 1,000 / file_count = 60,000`
+6) `depths = 5 / folder_count = 8,000 / file_count = 80,000`
+
+For each scenario we retried the benchmark with a different perf rin buffer size. We tested the following sizes: [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096].
+
+##### Results
+
+The entire output of the benchmark is available [here](documentation/FSProbe%20benchmark.pdf), the following table contains only the high level output:
+
+| scenario | fragments | single_fragment | perf_buffer |
+| :---: | :--- | :--- | :--- |
+| 1 | **Best ns/op**: next is 10% slower (**Evt drop limit**: 256) | **Best ns/op**: next is 10% slower (**Evt drop limit**: 2048) | **Lowest B/op**: others are 100% - 400% higher (**Evt drop limit**: 64) |
+| 2 | **Best ns/op**: next is 5% slower (**Evt drop limit**: 256) | **Second best ns/op**: next is 20% slower (**Evt drop limit**: 512) | **Lowest B/op**: others are 500% - 10,000% higher (**Evt drop limit**: 32) |
+| 3 | **Best ns/op**: next is 9% slower (**Evt drop limit**: 1024) | **Evt drop limit**: 2048 | **Second best ns/op**: next is 30% slower. **Lowest B/op**: others are 250% - 450% higher (**Evt drop limit**: 64) |
+| 4 | **Evt drop limit**: 128 | **Evt drop limit**: 2048 | **Best ns/op**: others are 30% - 55% slower. **Lowest B/op**: others are 300% - 400% higher (**Evt drop limit**: 64) |
+| 5 | **Best ns/op**: next is 30% slower. **Lowest B/op**: others are 63% higher (**Evt drop limit**: 512) | **Evt drop limit**: 2048 | **Second best ns/op**: next is 20% slower. **Second lowest B/op**: next is 325% higher (**Evt drop limit**: 32) |
+| 6 | **Evt drop limit**: 128 | **Best ns/op**: next is 6% slower (**Evt drop limit**: 1024) | **Second best ns/op**: next is 1% slower. **Lowest B/op**: others are 300% - 350% higher (**Evt drop limit**: 64) |
+
+Based on this benchmark the `perf_buffer` method seems to be the most memory efficient one in most situations. Although its in-kernel overhead is not always the best, this method has such a lower memory footprint that we argue that the tradeoff is worth it. You will find below the output of the benchmark for the `perf_buffer` method, and for the scenario number 6 (we consider this scenario to be the most realistic one).
+
+![Perf buffer scenario 6 - execution overhead](documentation/perf_buffer_execution_overhead.png)
+
+![Perf buffer scenario 6 - memory overhead](documentation/perf_buffer_memory_overhead.png)
+
+The last piece of the benchmark was about the maximum sustainable rate of events per second. We decided to measure this rate for the parameters of scenario 6 since we consider it to be the most realistic. It is worth noting that the `single_fragment` method was unable to complete the test as it kept dropping events.
+
+![Maximum rates of events per seconds (sustained over 10 seconds without losing events)](documentation/maximum_rates.png)
+
 ### Capabilities Matrix
 
 | Feature | [Inotify](https://www.man7.org/linux/man-pages/man7/inotify.7.html) | [FSProbe](https://github.com/Gui774ume/fsprobe) | [Opensnoop](https://github.com/iovisor/bcc/blob/master/tools/opensnoop.py) | [Perf](http://www.brendangregg.com/perf.html) | [Falco](https://github.com/falcosecurity/falco)
-| --- | --- | --- | --- | --- | --- |
+| --- | :---: | :--- | :---: | :--- | :---: |
 | Process context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | User / Group context | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Recursive feature | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
