@@ -132,17 +132,18 @@ Based on this observation, we decided that all our benchmarks would use the foll
 - All the paths used for the benchmark will be made of nodes of identical size: 10 randomly generated letters or numbers
 - All the user space channel will have a buffer of 1000 entries
 - Each benchmark will be done over 120,000 iterations
-- The paths generator used for the benchmark will randomly choose a file to open in the pool of generated paths and at each iteration
+- The paths generator used for the benchmark will randomly choose a file to open in the pool of generated paths, at each iteration.
+- The paths generator generates paths with constant depths: there can only be one child folder per folder and only the last folder contains one or multiple files.
 - In-kernel caches were set to 40,000 entries for each technique, and the inodes filter was set to allow up to 120,000 inodes.
 
 Finally, we ran the benchmark through 6 scenarios:
 
 1) `depths = 10 / folder_count = 1 / file_count = 1`
 2) `depths = 60 / folder_count = 1 / file_count = 1`
-3) `depths = 10 / folder_count = 1 / file_count = 120,000`
-4) `depths = 10 / folder_count = 4,000 / file_count = 80,000`
-5) `depths = 60 / folder_count = 1,000 / file_count = 60,000`
-6) `depths = 5 / folder_count = 8,000 / file_count = 80,000`
+3) `depths = 10 / folder_count = 1 / file_count = 120,000` (all 120,000 files are in the same leaf folder)
+4) `depths = 10 / folder_count = 4,000 / file_count = 80,000` (2 files per leaf folder)
+5) `depths = 60 / folder_count = 1,000 / file_count = 60,000` (1 file per leaf folder)
+6) `depths = 5 / folder_count = 8,000 / file_count = 80,000` (2 files per leaf folder)
 
 For each scenario we retried the benchmark with a different perf rin buffer size. We tested the following sizes: [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096].
 
@@ -165,7 +166,7 @@ Based on this benchmark the `perf_buffer` method seems to be the most memory eff
 
 ![Perf buffer scenario 6 - memory overhead](documentation/perf_buffer_memory_overhead.png)
 
-The last piece of the benchmark was about the maximum sustainable rate of events per second. We decided to measure this rate for the parameters of scenario 6 since we consider it to be the most realistic. It is worth noting that the `single_fragment` method was unable to complete the test as it kept dropping events.
+The last part of the benchmark is about the maximum sustainable rates of events per second. We decided to measure these rates for the parameters of scenario 6 since we consider it to be the most realistic. It is worth noting that the `single_fragment` method was unable to complete the test as it kept dropping events.
 
 ![Maximum rates of events per seconds (sustained over 10 seconds without losing events)](documentation/maximum_rates.png)
 
