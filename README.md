@@ -154,7 +154,7 @@ The entire output of the benchmark is available [here](documentation/FSProbe%20b
 | scenario | fragments | single_fragment | perf_buffer |
 | :---: | :--- | :--- | :--- |
 | 1 | **Best ns/op**: next is 10% slower (**Evt drop limit**: 256) | **Best ns/op**: next is 10% slower (**Evt drop limit**: 2048) | **Lowest B/op**: others are 100% - 400% higher (**Evt drop limit**: 64) |
-| 2 | **Best ns/op**: next is 5% slower (**Evt drop limit**: 256) | **Second best ns/op**: next is 20% slower (**Evt drop limit**: 512) | **Lowest B/op**: others are 500% - 10,000% higher (**Evt drop limit**: 32) |
+| 2 | **Best ns/op**: next is 5% slower (**Evt drop limit**: 256) | **Second best ns/op**: next is 20% slower (**Evt drop limit**: 512) | **Lowest B/op**: others are 500% - 1,000% higher (**Evt drop limit**: 32) |
 | 3 | **Best ns/op**: next is 9% slower (**Evt drop limit**: 1024) | **Evt drop limit**: 2048 | **Second best ns/op**: next is 30% slower. **Lowest B/op**: others are 250% - 450% higher (**Evt drop limit**: 64) |
 | 4 | **Evt drop limit**: 128 | **Evt drop limit**: 2048 | **Best ns/op**: others are 30% - 55% slower. **Lowest B/op**: others are 300% - 400% higher (**Evt drop limit**: 64) |
 | 5 | **Best ns/op**: next is 30% slower. **Lowest B/op**: others are 63% higher (**Evt drop limit**: 512) | **Evt drop limit**: 2048 | **Second best ns/op**: next is 20% slower. **Second lowest B/op**: next is 325% higher (**Evt drop limit**: 32) |
