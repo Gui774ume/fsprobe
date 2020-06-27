@@ -57,7 +57,6 @@ limitations under the License.
 #include <linux/mount.h>
 #include <linux/types.h>
 #include <linux/fs_pin.h>
-#include <linux/mount.h>
 #include <linux/sched/signal.h>
 
 #include <linux/nsproxy.h>

@@ -181,7 +181,7 @@ func (fsp *FSProbe) compileEBPFProgram() error {
 // loadEBPFProgram - Loads the compiled eBPF programs
 func (fsp *FSProbe) loadEBPFProgram() error {
 	// Recover asset
-	buf, err := assets.Asset("probe.o")
+	buf, err := assets.Asset("/probe.o")
 	if err != nil {
 		return errors.Wrap(err, "couldn't find asset")
 	}
