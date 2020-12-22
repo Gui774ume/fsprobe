@@ -190,7 +190,11 @@ The last part of the benchmark is about the maximum sustainable rates of events 
 - Depending on the activated events the cache might get corrupted after removes / unlinks / rmdir.
 - Paths are resolved up to the root of each mountpoint.
 
-### Future Work
+### Future work
 
 - Support for [CO-RE](https://facebookmicrosites.github.io/bpf/blog/2020/02/19/bpf-portability-and-co-re.html) will be added shortly so that eBPF compilation won't be needed anymore.
 - Mount point resolution in order to support containers.
+
+### Real world example
+
+The [Datadog agent](https://github.com/DataDog/datadog-agent/tree/52cb2185d7188d965078ecf0a8c04db228374525/pkg/security) is currently using an improved version of the `fragments` method (with less overhead and better cache handling).
