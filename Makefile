@@ -24,7 +24,7 @@ build:
 	go build -o bin/ ./...
 
 run:
-	sudo ./bin/fsprobe /tmp/bonsoir.pyc
+	sudo ./bin/fsprobe /tmp
 
 install:
 	sudo cp ./bin/fsprobe /usr/bin/

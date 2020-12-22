@@ -92,6 +92,8 @@ func (drm *DentryResolutionModeValue) Set(val string) error {
 		*drm.mode = model.DentryResolutionFragments
 	case "single_fragment":
 		*drm.mode = model.DentryResolutionSingleFragment
+	case "perf_buffer":
+		*drm.mode = model.DentryResolutionPerfBuffer
 	default:
 		return fmt.Errorf("unknown dentry resolution mode: %v", val)
 	}

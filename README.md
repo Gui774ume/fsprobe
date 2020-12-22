@@ -1,6 +1,6 @@
 ## FSProbe
 
-FSProbe is a file system events notifier based on eBPF. Instead of hooking at the syscall level (like other well-known eBPF solutions: [opensnoop](https://github.com/iovisor/bcc/blob/master/tools/opensnoop.py), [Falco](https://github.com/falcosecurity/falco), ...), FSProbe works by listening for events at the VFS level. Paths are resolved at runtime by traversing the `dentry` tree up to the mount point of the filesystem. One of the main advantages of this solution is that the paths provided by FSProbe are absolute and resolved, while a syscall based strategy would only export syscall parameters (and thus potentially attacker controlled data).
+FSProbe is a file system events notifier based on eBPF. Instead of hooking at the syscall level (like other eBPF solutions: [opensnoop](https://github.com/iovisor/bcc/blob/master/tools/opensnoop.py), [Falco](https://github.com/falcosecurity/falco), ...), FSProbe works by listening for events at the VFS level. Paths are resolved at runtime by going through the `dentry` tree up to the mount point of the filesystem. One of the main advantages of this solution is that the paths provided by FSProbe are absolute and resolved, while a syscall based strategy would only export syscall parameters (and thus potentially attacker controlled data).
 
 ### Requirements
 
@@ -8,7 +8,7 @@ FSProbe is a file system events notifier based on eBPF. Instead of hooking at th
 
 If you want to rebuild the eBPF programs, make sure to h:
 
-- This project was built on a Linux Kernel 5.3 and should be compatible with Kernels 5.0+. Support for [CO-RE](https://facebookmicrosites.github.io/bpf/blog/2020/02/19/bpf-portability-and-co-re.html) will be added shortly so that eBPF compilation won't be needed anymore.
+- This project was built on a Linux Kernel 5.3 and should be compatible with Kernels 5.0+.
 - Kernel headers are expected to be installed in `lib/modules/$(uname -r)`, update the `Makefile` with their location otherwise.
 - clang & llvm (version 8.0.1)
 
@@ -51,7 +51,7 @@ Flags:
       --dentry-resolution-mode string   In-kernel dentry resolution mode. Can be either "fragments",
                                         "single_fragment" or "perf_buffer" (default "perf_buffer")
   -e, --event string                    Listens for specific event(s) only. This option can be specified
-                                        more than once. If omitted, only "open" events are listened for.
+                                        more than once. If omitted, all the events will be activated except the modify one.
                                         Available options: open, mkdir, link, rename, setattr, unlink,
                                         rmdir, modify (default "[]")
       --follow                          When activated, FSProbe will keep watching the files that were
@@ -184,3 +184,13 @@ The last part of the benchmark is about the maximum sustainable rates of events 
 | In-kernel filtering | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: |
 | Container context | :x: | :x: (not implemented yet) | :x: | :x: | :white_check_mark: |
 | Follow files after move | :x: | :white_check_mark: | :x: | :x: | :x: |
+
+### Known issues
+
+- Depending on the activated events the cache might get corrupted after removes / unlinks / rmdir.
+- Paths are resolved up to the root of each mountpoint.
+
+### Future Work
+
+- Support for [CO-RE](https://facebookmicrosites.github.io/bpf/blog/2020/02/19/bpf-portability-and-co-re.html) will be added shortly so that eBPF compilation won't be needed anymore.
+- Mount point resolution in order to support containers.
