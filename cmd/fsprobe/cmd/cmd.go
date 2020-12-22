@@ -27,7 +27,7 @@ var FSProbeCmd = &cobra.Command{
 
 FSProbe relies on eBPF to capture file system events on dentry kernel structures.
 More information about the project can be found on github: https://github.com/Gui774ume/fsprobe`,
-	RunE: runFSProbeCmd,
+	RunE:    runFSProbeCmd,
 	Example: "sudo fsprobe /tmp",
 }
 
@@ -70,7 +70,7 @@ even after a move`)
 		"event",
 		"e",
 		`Listens for specific event(s) only. This option can be specified
-more than once. If omitted, only "open" events are listened for.
+more than once. If omitted, all the events will be activated except the modify one.
 Available options: open, mkdir, link, rename, setattr, unlink,
 rmdir, modify`)
 	FSProbeCmd.Flags().IntVarP(

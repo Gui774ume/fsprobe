@@ -92,22 +92,22 @@ func pollLost(lostChan chan *model.LostEvt) {
 	var evt *model.LostEvt
 	var ok bool
 	select {
-		case evt, ok = <-lostChan:
-			if !ok {
-				return
-			}
-			logrus.Warnf("lost %v events from %v", evt.Count, evt.Map)
-			break
+	case evt, ok = <-lostChan:
+		if !ok {
+			return
+		}
+		logrus.Warnf("lost %v events from %v", evt.Count, evt.Map)
+		break
 	}
 }
 
 func BenchmarkOpen(b *testing.B) {
 	pg := &PathsGenerator{
-		Depth: 5,
-		Breadth: 8000,
-		NumOfFiles: 80000,
+		Depth:       5,
+		Breadth:     8000,
+		NumOfFiles:  80000,
 		NamesLength: 10,
-		Root: "/tmp/fsprobe",
+		Root:        "/tmp/fsprobe",
 	}
 	if err := pg.Init(); err != nil {
 		b.Fatal(err)
@@ -121,64 +121,64 @@ func BenchmarkOpen(b *testing.B) {
 
 func BenchmarkFSProbePerfBufferOpen(b *testing.B) {
 	benchmarkFSProbe(b, model.FSProbeOptions{
-		Events: []model.EventName{model.Open},
-		PerfBufferSize: 4096,
-		UserSpaceChanSize: 1000,
+		Events:               []model.EventName{model.Open},
+		PerfBufferSize:       4096,
+		UserSpaceChanSize:    1000,
 		DentryResolutionMode: model.DentryResolutionPerfBuffer,
-		PathsFiltering: true,
-		Recursive: true,
+		PathsFiltering:       true,
+		Recursive:            true,
 	}, &PathsGenerator{
-		Depth: 5,
-		Breadth: 8000,
-		NumOfFiles: 80000,
+		Depth:       5,
+		Breadth:     8000,
+		NumOfFiles:  80000,
 		NamesLength: 10,
-		Root: "/tmp/fsprobe",
+		Root:        "/tmp/fsprobe",
 	})
 }
 
 func BenchmarkFSProbeFragmentsOpen(b *testing.B) {
 	benchmarkFSProbe(b, model.FSProbeOptions{
-		Events: []model.EventName{model.Open},
-		PerfBufferSize: 4096,
-		UserSpaceChanSize: 1000,
+		Events:               []model.EventName{model.Open},
+		PerfBufferSize:       4096,
+		UserSpaceChanSize:    1000,
 		DentryResolutionMode: model.DentryResolutionFragments,
-		PathsFiltering: true,
-		Recursive: true,
+		PathsFiltering:       true,
+		Recursive:            true,
 	}, &PathsGenerator{
-		Depth: 5,
-		Breadth: 8000,
-		NumOfFiles: 80000,
+		Depth:       5,
+		Breadth:     8000,
+		NumOfFiles:  80000,
 		NamesLength: 10,
-		Root: "/tmp/fsprobe",
+		Root:        "/tmp/fsprobe",
 	})
 }
 
 func BenchmarkFSProbeSingleFragmentOpen(b *testing.B) {
 	benchmarkFSProbe(b, model.FSProbeOptions{
-		Events: []model.EventName{model.Open},
-		PerfBufferSize: 4096,
-		UserSpaceChanSize: 1000,
+		Events:               []model.EventName{model.Open},
+		PerfBufferSize:       4096,
+		UserSpaceChanSize:    1000,
 		DentryResolutionMode: model.DentryResolutionSingleFragment,
-		PathsFiltering: true,
-		Recursive: true,
+		PathsFiltering:       true,
+		Recursive:            true,
 	}, &PathsGenerator{
-		Depth: 5,
-		Breadth: 8000,
-		NumOfFiles: 80000,
+		Depth:       5,
+		Breadth:     8000,
+		NumOfFiles:  80000,
 		NamesLength: 10,
-		Root: "/tmp/fsprobe",
+		Root:        "/tmp/fsprobe",
 	})
 }
 
 func BenchmarkPerfBufferSize(b *testing.B) {
 	options := model.FSProbeOptions{
-		Events: []model.EventName{model.Open},
+		Events:            []model.EventName{model.Open},
 		UserSpaceChanSize: 1000,
-		PathsFiltering: true,
-		Recursive: true,
+		PathsFiltering:    true,
+		Recursive:         true,
 	}
 	benchmarks := []struct {
-		name string
+		name           string
 		perfBufferSize int
 		resolutionMode model.DentryResolutionMode
 	}{
@@ -218,11 +218,11 @@ func BenchmarkPerfBufferSize(b *testing.B) {
 		options.DentryResolutionMode = bm.resolutionMode
 		b.Run(bm.name, func(b *testing.B) {
 			pg := PathsGenerator{
-				Depth: 60,
-				Breadth: 1000,
-				NumOfFiles: 60000,
+				Depth:       60,
+				Breadth:     1000,
+				NumOfFiles:  60000,
 				NamesLength: 10,
-				Root: "/tmp/fsprobe",
+				Root:        "/tmp/fsprobe",
 			}
 			benchmarkFSProbe(b, options, &pg)
 		})

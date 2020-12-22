@@ -28,12 +28,12 @@ import (
 )
 
 type Output struct {
-	EvtChan chan *model.FSEvent
+	EvtChan  chan *model.FSEvent
 	LostChan chan *model.LostEvt
-	wg      *sync.WaitGroup
-	ctx     context.Context
-	cancel  context.CancelFunc
-	writer  OutputWriter
+	wg       *sync.WaitGroup
+	ctx      context.Context
+	cancel   context.CancelFunc
+	writer   OutputWriter
 }
 
 // NewOutput - Returns an output instance configured with the requested format & output
@@ -44,12 +44,12 @@ func NewOutput(options CLIOptions) (*Output, error) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	output := Output{
-		EvtChan: make(chan *model.FSEvent, options.FSOptions.UserSpaceChanSize),
+		EvtChan:  make(chan *model.FSEvent, options.FSOptions.UserSpaceChanSize),
 		LostChan: make(chan *model.LostEvt, options.FSOptions.UserSpaceChanSize),
-		wg: &sync.WaitGroup{},
-		ctx: ctx,
-		cancel: cancel,
-		writer: writer,
+		wg:       &sync.WaitGroup{},
+		ctx:      ctx,
+		cancel:   cancel,
+		writer:   writer,
 	}
 	output.Start()
 	return &output, nil
@@ -155,7 +155,7 @@ type TableOutput struct {
 func NewTableOutput(writer io.Writer) TableOutput {
 	out := TableOutput{
 		output: writer,
-		fmt:    "%7v %7v %6v %6v %6v %6v %16v %6v %10v %7v %6v %6v %16v %s\n",
+		fmt:    "%7v %7v %6v %6v %6v %6v %16v %6v %7v %6v %6v %16v %s\n",
 		tsFmt:  "3:04PM",
 	}
 	out.PrintHeader()
@@ -173,7 +173,6 @@ func (to TableOutput) Write(event *model.FSEvent) error {
 		event.UID,
 		event.GID,
 		event.Comm,
-		event.TTYName,
 		event.SrcInode,
 		event.SrcMountID,
 		model.ErrValueToString(event.Retval),
@@ -186,7 +185,7 @@ func (to TableOutput) Write(event *model.FSEvent) error {
 
 // PrintHeader - Prints table header
 func (to TableOutput) PrintHeader() {
-	fmt.Printf(to.fmt, "EVT", "TS", "PID", "TID", "UID", "GID", "CMD", "TTY", "INODE", "MOUNTID", "RET", "MODE", "FLAG", "PATH")
+	fmt.Printf(to.fmt, "EVT", "TS", "PID", "TID", "UID", "GID", "CMD", "INODE", "MOUNTID", "RET", "MODE", "FLAG", "PATH")
 }
 
 // DummyOutput - Dummy output for the none format

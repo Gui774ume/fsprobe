@@ -28,23 +28,12 @@ struct process_ctx_t
     u32 tid;
     u32 uid;
     u32 gid;
-    char tty_name[TTY_NAME_LEN];
     char comm[TASK_COMM_LEN];
 };
 
 // fill_process_data - Fills the provided process_ctx_t with the process context available from eBPF
 __attribute__((always_inline)) static u64 fill_process_data(struct process_ctx_t *data)
 {
-    // Process data
-    struct task_struct *task = (struct task_struct *)bpf_get_current_task();
-
-    // TTY
-    struct signal_struct *signal;
-    bpf_probe_read(&signal, sizeof(signal), &task->signal);
-    struct tty_struct *tty;
-    bpf_probe_read(&tty, sizeof(tty), &signal->tty);
-    bpf_probe_read_str(data->tty_name, TTY_NAME_LEN, tty->name);
-
     // Comm
     bpf_get_current_comm(&data->comm, sizeof(data->comm));
 

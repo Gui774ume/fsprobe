@@ -32,9 +32,9 @@ var (
 type DentryResolutionMode uint64
 
 const (
-	DentryResolutionFragments DentryResolutionMode = 0
+	DentryResolutionFragments      DentryResolutionMode = 0
 	DentryResolutionSingleFragment DentryResolutionMode = 1
-	DentryResolutionPerfBuffer DentryResolutionMode = 2
+	DentryResolutionPerfBuffer     DentryResolutionMode = 2
 )
 
 // ErrValue - Return value
@@ -618,7 +618,7 @@ const (
 	OAPPEND    OpenFlag = 1024
 	ONONBLOCK  OpenFlag = 2048
 	ODSYNC     OpenFlag = 4096  /* used to be OSYNC, see below */
-	FASYNC      OpenFlag = 8192  /* fcntl, for BSD compatibility */
+	FASYNC     OpenFlag = 8192  /* fcntl, for BSD compatibility */
 	ODIRECT    OpenFlag = 16384 /* direct disk access hint */
 	OLARGEFILE OpenFlag = 32768
 	ODIRECTORY OpenFlag = 65536  /* must be a directory */

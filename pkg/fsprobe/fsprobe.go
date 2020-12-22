@@ -18,8 +18,6 @@ package fsprobe
 import (
 	"bytes"
 	"fmt"
-	"github.com/Gui774ume/fsprobe/pkg/fsprobe/monitor"
-	"golang.org/x/sys/unix"
 	"io/ioutil"
 	"math"
 	"math/rand"
@@ -30,14 +28,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Gui774ume/fsprobe/pkg/assets"
-	"github.com/Gui774ume/fsprobe/pkg/model"
-	"github.com/Gui774ume/fsprobe/pkg/utils"
-
 	"github.com/DataDog/gopsutil/host"
 	"github.com/Gui774ume/ebpf"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
+
+	"github.com/Gui774ume/fsprobe/pkg/assets"
+	"github.com/Gui774ume/fsprobe/pkg/fsprobe/monitor"
+	"github.com/Gui774ume/fsprobe/pkg/model"
+	"github.com/Gui774ume/fsprobe/pkg/utils"
 )
 
 // FSProbe - Main File system probe structure
@@ -283,7 +283,7 @@ func (fsp *FSProbe) addRecursiveWatch(paths ...string) error {
 				return nil
 			}
 			if !fi.IsDir() {
-				return nil
+				return fsp.addTopLevelWatch([]string{walkPath}...)
 			}
 			stat, ok := fi.Sys().(*syscall.Stat_t)
 			if !ok && stat == nil {

@@ -76,7 +76,14 @@ func NewDentryResolutionModeValue(mode *model.DentryResolutionMode) *DentryResol
 }
 
 func (drm *DentryResolutionModeValue) String() string {
-	return "perf_buffer"
+	switch *drm.mode {
+	case model.DentryResolutionFragments:
+		return "fragments"
+	case model.DentryResolutionSingleFragment:
+		return "single_fragment"
+	default:
+		return "perf_buffer"
+	}
 }
 
 func (drm *DentryResolutionModeValue) Set(val string) error {

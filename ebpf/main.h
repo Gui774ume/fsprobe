@@ -44,7 +44,6 @@ limitations under the License.
 #define asm_volatile_goto(x...) asm volatile("invalid use of asm_volatile_goto")
 
 #include <linux/ptrace.h>
-#include <linux/tty.h>
 #pragma clang diagnostic pop
 
 #pragma clang diagnostic push

@@ -28,7 +28,7 @@ type RWatcher struct {
 	Errors chan error
 
 	done     chan struct{}
-	inotify *Watcher
+	inotify  *Watcher
 	isClosed bool
 }
 

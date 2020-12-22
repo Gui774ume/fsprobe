@@ -24,7 +24,7 @@ import (
 
 type LostEvt struct {
 	Count uint64
-	Map string
+	Map   string
 }
 
 // PerfMap - Definition of a perf map, used to bring data back to user space

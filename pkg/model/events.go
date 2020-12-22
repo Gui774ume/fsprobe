@@ -225,7 +225,6 @@ type FSEvent struct {
 	Tid                  uint32    `json:"tid"`
 	UID                  uint32    `json:"uid"`
 	GID                  uint32    `json:"gid"`
-	TTYName              string    `json:"tty_name"`
 	Comm                 string    `json:"comm"`
 	Flags                uint32    `json:"flags,omitempty"`
 	Mode                 uint32    `json:"mode,omitempty"`
@@ -244,8 +243,8 @@ type FSEvent struct {
 }
 
 func (e *FSEvent) UnmarshalBinary(data []byte, bootTime time.Time) (int, error) {
-	if len(data) < 112 {
-		return 0, errors.New("not enough data")
+	if len(data) < 96 {
+		return 0, errors.Errorf("not enough data: %d", len(data))
 	}
 	// Process context data
 	e.Timestamp = bootTime.Add(time.Duration(utils.ByteOrder.Uint64(data[0:8])) * time.Nanosecond)
@@ -253,22 +252,21 @@ func (e *FSEvent) UnmarshalBinary(data []byte, bootTime time.Time) (int, error) 
 	e.Tid = utils.ByteOrder.Uint32(data[12:16])
 	e.UID = utils.ByteOrder.Uint32(data[16:20])
 	e.GID = utils.ByteOrder.Uint32(data[20:24])
-	e.TTYName = string(bytes.Trim(data[24:40], "\x00"))
-	e.Comm = string(bytes.Trim(data[40:56], "\x00"))
+	e.Comm = string(bytes.Trim(data[24:40], "\x00"))
 	// File system event data
-	e.Flags = utils.ByteOrder.Uint32(data[56:60])
-	e.Mode = utils.ByteOrder.Uint32(data[60:64])
-	e.SrcPathnameKey = utils.ByteOrder.Uint32(data[64:68])
-	e.TargetPathnameKey = utils.ByteOrder.Uint32(data[68:72])
-	e.SrcInode = utils.ByteOrder.Uint64(data[72:80])
-	e.SrcPathnameLength = utils.ByteOrder.Uint32(data[80:84])
-	e.SrcMountID = utils.ByteOrder.Uint32(data[84:88])
-	e.TargetInode = utils.ByteOrder.Uint64(data[88:96])
-	e.TargetPathnameLength = utils.ByteOrder.Uint32(data[96:100])
-	e.TargetMountID = utils.ByteOrder.Uint32(data[100:104])
-	e.Retval = int32(utils.ByteOrder.Uint32(data[104:108]))
-	e.EventType = GetEventType(utils.ByteOrder.Uint32(data[108:112]))
-	return 112, nil
+	e.Flags = utils.ByteOrder.Uint32(data[40:44])
+	e.Mode = utils.ByteOrder.Uint32(data[44:48])
+	e.SrcPathnameKey = utils.ByteOrder.Uint32(data[48:52])
+	e.TargetPathnameKey = utils.ByteOrder.Uint32(data[52:56])
+	e.SrcInode = utils.ByteOrder.Uint64(data[56:64])
+	e.SrcPathnameLength = utils.ByteOrder.Uint32(data[64:68])
+	e.SrcMountID = utils.ByteOrder.Uint32(data[68:72])
+	e.TargetInode = utils.ByteOrder.Uint64(data[72:80])
+	e.TargetPathnameLength = utils.ByteOrder.Uint32(data[80:84])
+	e.TargetMountID = utils.ByteOrder.Uint32(data[84:88])
+	e.Retval = int32(utils.ByteOrder.Uint32(data[88:92]))
+	e.EventType = GetEventType(utils.ByteOrder.Uint32(data[92:96]))
+	return 96, nil
 }
 
 // PrintFilenames - Returns a string representation of the filenames of the event

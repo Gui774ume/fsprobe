@@ -32,26 +32,33 @@ func runFSProbeCmd(cmd *cobra.Command, args []string) error {
 	if err := sanitizeOptions(args); err != nil {
 		return err
 	}
+
 	// 1) Prepare events output handler
 	output, err := NewOutput(options)
 	if err != nil {
 		logrus.Fatalf("couldn't create FSEvent output: %v", err)
 	}
+
 	// 2) Set the output channel to FSProbe's output channel
 	options.FSOptions.EventChan = output.EvtChan
 	options.FSOptions.LostChan = output.LostChan
+
 	// 3) Instantiates FSProbe
 	probe := fsprobe.NewFSProbeWithOptions(options.FSOptions)
+
 	// 4) Start listening for events
 	if err := probe.Watch(args...); err != nil {
 		logrus.Fatalf("couldn't start watching the filesystem: %v", err)
 	}
+
 	// 5) Wait until interrupt signal
 	wait()
+
 	// Stop fsprobe
 	if err := probe.Stop(); err != nil {
 		logrus.Fatalf("couldn't gracefully shutdown fsprobe: %v", err)
 	}
+
 	// Close the output
 	output.Close()
 	return nil
