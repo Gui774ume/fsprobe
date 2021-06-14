@@ -20,6 +20,7 @@ limitations under the License.
 #pragma clang diagnostic ignored "-Waddress-of-packed-member"
 #pragma clang diagnostic ignored "-Warray-bounds"
 #pragma clang diagnostic ignored "-Wunused-label"
+#pragma clang diagnostic ignored "-Wframe-address"
 
 /* In Linux 5.4 asm_inline was introduced, but it's not supported by clang.
  * Redefine it to just asm to enable successful compilation.

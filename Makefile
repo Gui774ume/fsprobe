@@ -18,10 +18,11 @@ build-ebpf:
 		-O2 -emit-llvm \
 		ebpf/main.c \
 		-c -o - | llc -march=bpf -filetype=obj -o ebpf/bin/probe.o
-	go-bindata -pkg assets -prefix "ebpf/bin" -o "pkg/assets/probe.go" "ebpf/bin/probe.o"
+	go run github.com/shuLhan/go-bindata/cmd/go-bindata -pkg assets -prefix "ebpf/bin" -o "pkg/assets/probe.go" "ebpf/bin/probe.o"
 
 build:
-	go build -o bin/ ./...
+	mkdir -p bin/
+	go build -o bin/ ./cmd/...
 
 run:
 	sudo ./bin/fsprobe /tmp
