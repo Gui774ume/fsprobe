@@ -4,7 +4,7 @@ FSProbe is a file system events notifier based on eBPF. Instead of hooking at th
 
 ### Requirements
 
-- golang 1.13+
+- golang 1.16+
 - This project was built on a Linux Kernel 5.3 and should be compatible with Kernels 5.0+.
 - Kernel headers are expected to be installed in `lib/modules/$(uname -r)`, update the `Makefile` with their location otherwise.
 - clang & llvm (version 8.0.1)
