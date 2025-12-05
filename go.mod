@@ -8,10 +8,8 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/pkg/errors v0.9.1
 	github.com/shuLhan/go-bindata v4.0.0+incompatible
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.3
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/sys v0.1.0
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
